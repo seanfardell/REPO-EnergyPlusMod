@@ -66,20 +66,13 @@ internal class EnergyCrystalPlusPatch
 
             // check lobby for other players for scaling
             int totalEnergyCrystalEnergy = configBase;
-            try 
+            Room currentRoom = PhotonNetwork.CurrentRoom;
+            if (PhotonNetwork.InRoom && currentRoom != null && currentRoom.PlayerCount > 1) 
             {
-                Room currentRoom = PhotonNetwork.CurrentRoom;
-                if (PhotonNetwork.InRoom && currentRoom != null && currentRoom.PlayerCount > 1) 
-                {
-                    DebugLog($"players={currentRoom.PlayerCount}");
-                    totalEnergyCrystalEnergy += (currentRoom.PlayerCount - 1) * configAdditional;
-                    totalEnergyCrystalEnergy = totalEnergyCrystalEnergy > configMax ? 
-                        configMax : totalEnergyCrystalEnergy;
-                }
-            } 
-            catch (Exception e) 
-            {
-                DebugLog($"exception={e.Message}");
+                DebugLog($"players={currentRoom.PlayerCount}");
+                totalEnergyCrystalEnergy += (currentRoom.PlayerCount - 1) * configAdditional;
+                totalEnergyCrystalEnergy = totalEnergyCrystalEnergy > configMax ? 
+                    configMax : totalEnergyCrystalEnergy;
             }
 
             // run the math
