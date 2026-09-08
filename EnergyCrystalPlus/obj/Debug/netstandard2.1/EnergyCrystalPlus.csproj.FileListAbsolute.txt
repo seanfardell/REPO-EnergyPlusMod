@@ -1,0 +1,8 @@
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\bin\Debug\netstandard2.1\EnergyCrystalPlus.deps.json
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\bin\Debug\netstandard2.1\EnergyCrystalPlus.dll
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.csproj.AssemblyReference.cache
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.AssemblyInfoInputs.cache
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.AssemblyInfo.cs
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.csproj.CoreCompileInputs.cache
+C:\Users\smfar\RiderProjects\RepoMods\EnergyCrystalPlus\obj\Debug\netstandard2.1\EnergyCrystalPlus.dll
