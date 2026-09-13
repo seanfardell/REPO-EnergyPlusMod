@@ -8,18 +8,61 @@ using UnityEngine;
 
 namespace EnergyCrystalPlus;
 
-[HarmonyPatch(typeof(ChargingStation), "Start")]
+[HarmonyPatch(typeof(ChargingStation))]
 internal class EnergyCrystalPlusPatch
 {
-    private static readonly bool IsLoggingOn = true;
-    private static readonly float ChargeTotalConverterUnit = 1000f;
+    private static readonly String KeyChargeFloatX1000 = "energyCrystalPlusChargeFloat";
+    private static readonly String KeyCrystalsPurchased = "crystalsOnLastShopEntry";
+    private static readonly String KeyItemEnergyCrystal = "Item Power Crystal";
+    
 
     private static void DebugLog(String text)
     {
-        if (IsLoggingOn)
+        bool IsDebugEnabled = EnergyCrystalPlus.ModConfig.IsDebugEnabled();
+        if (IsDebugEnabled)
         {
             Debug.Log((object)$"EnergyCrystal+: {text}");
         }
+    }
+    
+    private static int GetEnergyCrystalValue()
+    {
+        // check nullables and get config values
+        int configBase = EnergyCrystalPlus.ModConfig.GetBaseChargePerCrystal();
+        int configAdditional = EnergyCrystalPlus.ModConfig.GetAdditionalPerPlayer();
+        int configMax = EnergyCrystalPlus.ModConfig.GetMaxChargePerCrystal();
+        DebugLog($"Config base={configBase} scaled={configAdditional} max={configMax}");
+
+        // check lobby for other players for scaling
+        int totalEnergyCrystalEnergy = configBase;
+        Room currentRoom = PhotonNetwork.CurrentRoom;
+        if (PhotonNetwork.InRoom && currentRoom != null && currentRoom.PlayerCount > 1) 
+        {
+            // check if energy goes over desired max
+            DebugLog($"players={currentRoom.PlayerCount}");
+            totalEnergyCrystalEnergy += (currentRoom.PlayerCount - 1) * configAdditional;
+            totalEnergyCrystalEnergy = totalEnergyCrystalEnergy > configMax ? 
+                configMax : totalEnergyCrystalEnergy;
+        }
+
+        DebugLog($"energyPlusPerCrystal={totalEnergyCrystalEnergy}");
+        return totalEnergyCrystalEnergy;
+    }
+
+    private static void SaveRunStats(float chargeFloat, int crystalsPurchased)
+    {
+        SaveRunStatsChargeFloat((int)Math.Round(chargeFloat * 1000f));
+        SaveRunStatsCrystalsPurchased(crystalsPurchased);
+    }
+
+    private static void SaveRunStatsChargeFloat(int chargeFloatX1000)
+    {
+        StatsManager.instance.runStats[KeyChargeFloatX1000] = chargeFloatX1000;
+    }
+
+    private static void SaveRunStatsCrystalsPurchased(int crystalsPurchased)
+    {
+        StatsManager.instance.runStats[KeyCrystalsPurchased] = crystalsPurchased;
     }
     
     [HarmonyPatch(nameof(ChargingStation.Start))]
@@ -29,10 +72,9 @@ internal class EnergyCrystalPlusPatch
         DebugLog("Prefix--------------------");
         if (SemiFunc.RunIsShop())
         {
-            // save current charge if we are in the store
-            StatsManager.instance.runStats["crystalsOnLastShopEntry"] =
-                StatsManager.instance.itemsPurchased["Item Power Crystal"];
-            DebugLog($"pre-shop-crystals={StatsManager.instance.runStats["crystalsOnLastShopEntry"]}");
+            // save current crystal purchases if we are in the store
+            SaveRunStatsCrystalsPurchased(StatsManager.instance.itemsPurchasedTotal[KeyItemEnergyCrystal]);
+            DebugLog($"pre-shop-crystals={StatsManager.instance.runStats[KeyCrystalsPurchased]}");
         }
     }
     
@@ -41,46 +83,38 @@ internal class EnergyCrystalPlusPatch
     private static void Postfix(ref float ___chargeFloat, ref int ___chargeInt, ref float ___chargeRate, ref int ___chargeTotal)
     {
         DebugLog("--------------------Postfix");
-        // pull stat data for current energy
-        int crystalsOnLastShopEntry = StatsManager.instance.runStats.GetValueOrDefault("crystalsOnLastShopEntry",-1);
-        int chargeTotal = StatsManager.instance.runStats.GetValueOrDefault("energyCrystalPlusChargeTotal",-1);
-        int numCrystals = StatsManager.instance.itemsPurchased["Item Power Crystal"] - crystalsOnLastShopEntry;
-        float chargeTotalConverted = chargeTotal / ChargeTotalConverterUnit;
+        // pull run stats for saved data
+        int crystalsOnLastShopEntry = StatsManager.instance.runStats.GetValueOrDefault(KeyCrystalsPurchased,-1);
+        float chargeFloat = StatsManager.instance.runStats.GetValueOrDefault(KeyChargeFloatX1000,-1) / 1000f;
+        int numCrystals = StatsManager.instance.itemsPurchasedTotal[KeyItemEnergyCrystal] - crystalsOnLastShopEntry;
         if (crystalsOnLastShopEntry < 0)
         {
-            DebugLog("shop has not been entered before, skipping postfix logic");
+            DebugLog("no shop data detected");
+            // if we havent been to the store yet, save some initial data
+            int level = StatsManager.instance.runStats.GetValueOrDefault("level", -1);
+            if (SemiFunc.RunIsLevel() && level <= 0)
+            {
+                ___chargeTotal = GetEnergyCrystalValue();
+                ___chargeFloat = ___chargeTotal / 100f;
+                SaveRunStats(___chargeFloat, StatsManager.instance.itemsPurchasedTotal[KeyItemEnergyCrystal]);
+            }
+            DebugLog($"level {level} detected, initial value={___chargeFloat}");
         } 
-        else if (numCrystals == 0)
+        else if (numCrystals <= 0)
         {
-            ___chargeFloat = chargeTotalConverted;
-            ___chargeTotal = (int)Math.Round(chargeTotalConverted * 100);
-            DebugLog($"not detecting any new crystals, saved value= {___chargeFloat}");
+            // pull from saved values if nothing is changed
+            ___chargeFloat = chargeFloat;
+            ___chargeTotal = (int)Math.Round(chargeFloat * 100);
+            DebugLog($"not detecting any new crystals, saved value={___chargeFloat}");
         }
         else if (SemiFunc.RunIsLobby()) 
         {
-            // check nullables and get config values
-            int configBase = EnergyCrystalPlus.ModConfig.GetBaseChargePerCrystal();
-            int configAdditional = EnergyCrystalPlus.ModConfig.GetAdditionalPerPlayer();
-            int configMax = EnergyCrystalPlus.ModConfig.GetMaxChargePerCrystal();
-            DebugLog($"Config base={configBase} scaled={configAdditional} max={configMax}");
-
-            // check lobby for other players for scaling
-            int totalEnergyCrystalEnergy = configBase;
-            Room currentRoom = PhotonNetwork.CurrentRoom;
-            if (PhotonNetwork.InRoom && currentRoom != null && currentRoom.PlayerCount > 1) 
-            {
-                DebugLog($"players={currentRoom.PlayerCount}");
-                totalEnergyCrystalEnergy += (currentRoom.PlayerCount - 1) * configAdditional;
-                totalEnergyCrystalEnergy = totalEnergyCrystalEnergy > configMax ? 
-                    configMax : totalEnergyCrystalEnergy;
-            }
-
-            // run the math
-            int totalChargeToAdd = numCrystals * totalEnergyCrystalEnergy;
-            float newChargeTotal = chargeTotalConverted + (totalChargeToAdd / 100f);
+            // calculate new values
+            int totalChargeToAdd = numCrystals * GetEnergyCrystalValue();
+            float newChargeTotal = chargeFloat + (totalChargeToAdd / 100f);
             
-            // log results for testing
-            DebugLog($"initial={chargeTotalConverted}, crystals={numCrystals}, " +
+            // log results
+            DebugLog($"initial={chargeFloat}, crystals={numCrystals}, " +
                      $"totaladd={totalChargeToAdd}, newtotal={newChargeTotal}");
 
             // set new value
@@ -88,8 +122,7 @@ internal class EnergyCrystalPlusPatch
             ___chargeTotal = (int)Math.Round(newChargeTotal * 100);
             
             // save to stats and account for the new crystals
-            StatsManager.instance.runStats["energyCrystalPlusChargeTotal"] = (int)Math.Round(___chargeFloat * ChargeTotalConverterUnit);
-            StatsManager.instance.runStats["crystalsOnLastShopEntry"] = StatsManager.instance.itemsPurchased["Item Power Crystal"];
+            SaveRunStats(___chargeFloat, StatsManager.instance.itemsPurchasedTotal[KeyItemEnergyCrystal]);
         }
     }
      
@@ -97,13 +130,13 @@ internal class EnergyCrystalPlusPatch
     [HarmonyPostfix]
     private static void Update_Postfix(ref float ___chargeFloat)
     {
-        int roundedChargeFloat = (int)Math.Round(___chargeFloat * ChargeTotalConverterUnit);
-        bool valueUpdated = roundedChargeFloat != StatsManager.instance.runStats.GetValueOrDefault("energyCrystalPlusChargeTotal", -1);
+        int chargedFloatX1000 = (int)Math.Round(___chargeFloat * 1000f);
+        bool valueUpdated = chargedFloatX1000 != StatsManager.instance.runStats.GetValueOrDefault(KeyChargeFloatX1000, -1);
         if (!SemiFunc.RunIsShop() && valueUpdated)
         {
             // if arnt in the shop we should keep track of the actual charge
             DebugLog($"update-post: {___chargeFloat}");
-            StatsManager.instance.runStats["energyCrystalPlusChargeTotal"] = roundedChargeFloat;
+            SaveRunStatsChargeFloat(chargedFloatX1000);
         }
     }
 }
