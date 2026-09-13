@@ -18,8 +18,8 @@ internal class EnergyCrystalPlusPatch
 
     private static void DebugLog(String text)
     {
-        bool IsDebugEnabled = EnergyCrystalPlus.ModConfig.IsDebugEnabled();
-        if (IsDebugEnabled)
+        bool isDebugEnabled = EnergyCrystalPlus.ModConfig.IsDebugEnabled();
+        if (isDebugEnabled)
         {
             Debug.Log((object)$"EnergyCrystal+: {text}");
         }
