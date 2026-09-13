@@ -14,7 +14,6 @@ internal class EnergyCrystalPlusPatch
     private static readonly String KeyChargeFloatX1000 = "energyCrystalPlusChargeFloat";
     private static readonly String KeyCrystalsPurchased = "crystalsOnLastShopEntry";
     private static readonly String KeyItemEnergyCrystal = "Item Power Crystal";
-    
 
     private static void DebugLog(String text)
     {

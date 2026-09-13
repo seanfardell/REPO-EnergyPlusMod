@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Omeron")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.1.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.1+f731be5b5da15b602dd375f37dd752100dbec6de")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.1+1c819813b36592e5fed0c9eb5acb455bfd9a3023")]
 [assembly: System.Reflection.AssemblyProductAttribute("EnergyCrystalPlus")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EnergyCrystalPlus")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.1.0")]
